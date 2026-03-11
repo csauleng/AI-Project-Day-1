@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { Todo } from '@/lib/db'
 import type { Holiday } from '@/lib/db'
@@ -19,7 +19,7 @@ function getFirstDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 1).getDay()
 }
 
-export default function CalendarPage() {
+function CalendarContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const now = new Date()
@@ -215,5 +215,13 @@ export default function CalendarPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-gray-500">Loading calendar...</div></div>}>
+      <CalendarContent />
+    </Suspense>
   )
 }
