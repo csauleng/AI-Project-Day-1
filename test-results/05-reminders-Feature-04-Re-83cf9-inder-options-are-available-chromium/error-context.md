@@ -1,0 +1,58 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - banner [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - heading "Todo App" [level=1] [ref=e16]
+          - paragraph [ref=e17]: Welcome, testuser_1773296486930
+        - generic [ref=e18]:
+          - button "⋮ Data" [ref=e20]:
+            - generic [ref=e21]: ⋮
+            - text: Data
+          - button "📅 Calendar" [ref=e22]
+          - button "📋 Templates" [ref=e23]
+          - button "🔔" [ref=e24]
+          - button "Logout" [ref=e25]
+    - main [ref=e26]:
+      - generic [ref=e28]:
+        - textbox "Add a new todo..." [ref=e29]
+        - generic [ref=e30]:
+          - combobox [ref=e31]:
+            - option "High"
+            - option "Medium" [selected]
+            - option "Low"
+          - generic [ref=e32]:
+            - textbox [active] [ref=e33]: 2026-03-20T14:21
+            - button "✕" [ref=e34]
+          - button "Add" [ref=e35]
+        - button "↓ Show Advanced Options" [ref=e36]
+      - generic [ref=e37]:
+        - textbox "Search todos and subtasks..." [ref=e38]
+        - generic [ref=e39]:
+          - combobox [ref=e40]:
+            - option "All Priorities" [selected]
+            - option "High"
+            - option "Medium"
+            - option "Low"
+          - button "▼ Advanced" [ref=e41]
+      - generic [ref=e42]:
+        - heading "Pending (0)" [level=2] [ref=e43]
+        - paragraph [ref=e44]: No pending todos 🎉
+    - contentinfo [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - generic [ref=e48]: "0"
+          - generic [ref=e49]: Overdue
+        - generic [ref=e50]:
+          - generic [ref=e51]: "0"
+          - generic [ref=e52]: Pending
+        - generic [ref=e53]:
+          - generic [ref=e54]: "0"
+          - generic [ref=e55]: Completed
+```

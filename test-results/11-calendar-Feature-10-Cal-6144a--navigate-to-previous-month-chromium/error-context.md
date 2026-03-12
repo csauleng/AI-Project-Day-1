@@ -1,0 +1,66 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - button "← Back" [ref=e6]
+          - heading "📅 Calendar" [level=1] [ref=e7]
+        - generic [ref=e8]:
+          - button "‹" [ref=e9]
+          - generic [ref=e10]: March 2026
+          - button "›" [ref=e11]
+          - button "Today" [ref=e12]
+    - main [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: Sun
+        - generic [ref=e16]: Mon
+        - generic [ref=e17]: Tue
+        - generic [ref=e18]: Wed
+        - generic [ref=e19]: Thu
+        - generic [ref=e20]: Fri
+        - generic [ref=e21]: Sat
+      - generic [ref=e22]:
+        - generic [ref=e24]: "1"
+        - generic [ref=e26]: "2"
+        - generic [ref=e28]: "3"
+        - generic [ref=e30]: "4"
+        - generic [ref=e32]: "5"
+        - generic [ref=e34]: "6"
+        - generic [ref=e36]: "7"
+        - generic [ref=e38]: "8"
+        - generic [ref=e40]: "9"
+        - generic [ref=e42]: "10"
+        - generic [ref=e44]: "11"
+        - generic [ref=e46]: "12"
+        - generic [ref=e48]: "13"
+        - generic [ref=e50]: "14"
+        - generic [ref=e52]: "15"
+        - generic [ref=e54]: "16"
+        - generic [ref=e56]: "17"
+        - generic [ref=e58]: "18"
+        - generic [ref=e60]: "19"
+        - generic [ref=e62]: "20"
+        - generic [ref=e64]: "21"
+        - generic [ref=e66]: "22"
+        - generic [ref=e68]: "23"
+        - generic [ref=e70]: "24"
+        - generic [ref=e72]: "25"
+        - generic [ref=e74]: "26"
+        - generic [ref=e76]: "27"
+        - generic [ref=e78]: "28"
+        - generic [ref=e80]: "29"
+        - generic [ref=e82]: "30"
+        - generic [ref=e84]: "31"
+      - generic [ref=e85]:
+        - generic [ref=e86]: High
+        - generic [ref=e88]: Medium
+        - generic [ref=e90]: Low
+        - generic [ref=e92]: Completed
+        - generic [ref=e94]: 🎉 Singapore Holiday
+  - button "Open Next.js Dev Tools" [ref=e100] [cursor=pointer]:
+    - img [ref=e101]
+  - alert [ref=e104]
+```
