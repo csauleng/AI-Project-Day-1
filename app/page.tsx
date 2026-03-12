@@ -126,21 +126,26 @@ export default function HomePage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [notifEnabled, setNotifEnabled] = useState(false)
+  const [username, setUsername] = useState('')
+  const [showAddAdvanced, setShowAddAdvanced] = useState(false)
+  const [showDataDropdown, setShowDataDropdown] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
 
   useNotifications(notifEnabled)
 
   const loadAll = useCallback(async () => {
     try {
-      const [todosRes, tagsRes, templatesRes] = await Promise.all([
+      const [todosRes, tagsRes, templatesRes, meRes] = await Promise.all([
         fetch('/api/todos'),
         fetch('/api/tags'),
         fetch('/api/templates'),
+        fetch('/api/auth/me'),
       ])
       if (todosRes.status === 401) { router.push('/login'); return }
       if (todosRes.ok) setTodos(await todosRes.json())
       if (tagsRes.ok) setTags(await tagsRes.json())
       if (templatesRes.ok) setTemplates(await templatesRes.json())
+      if (meRes.ok) { const me = await meRes.json(); setUsername(me.username || '') }
     } catch (e) {
       console.error(e)
     } finally {
@@ -384,39 +389,21 @@ export default function HomePage() {
     const isExpanded = expandedTodos.has(todo.id)
     const subtasks = todo.subtasks || []
     const done = subtasks.filter((s) => s.completed).length
-    const progress = subtasks.length > 0 ? Math.round((done / subtasks.length) * 100) : null
     return (
-      <div key={todo.id} className={`rounded-xl border shadow-sm p-4 bg-white dark:bg-gray-800 dark:border-gray-700 ${todo.completed ? 'opacity-60' : ''}`}>
-        <div className="flex items-start gap-3">
-          <input type="checkbox" checked={!!todo.completed} onChange={() => handleToggle(todo)} className="mt-1 w-4 h-4 cursor-pointer" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <span className={`font-medium dark:text-gray-100 ${todo.completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>{todo.title}</span>
-              <div className="flex shrink-0">
-                <button onClick={() => openEdit(todo)} className="text-gray-400 hover:text-blue-500 px-1">✏️</button>
-                <button onClick={() => handleDelete(todo.id)} className="text-gray-400 hover:text-red-500 px-1">🗑️</button>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${PRIORITY_COLORS[todo.priority]}`}>{todo.priority}</span>
-              {todo.due_date && <span className="text-xs text-gray-500">📅 {new Date(todo.due_date).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', dateStyle: 'short', timeStyle: 'short' })}</span>}
-              {!!todo.is_recurring && <span className="text-xs text-purple-600">🔁 {todo.recurrence_pattern}</span>}
-              {todo.reminder_minutes != null && <span className="text-xs text-orange-500">🔔 {REMINDER_OPTIONS.find((r) => r.value === todo.reminder_minutes)?.label ?? `${todo.reminder_minutes}m`}</span>}
-              {todo.tags?.map((tag) => <button key={tag.id} type="button" onClick={() => setFilterTag(filterTag === tag.id ? '' : tag.id)} className="text-xs px-2 py-0.5 rounded-full text-white cursor-pointer hover:opacity-80 transition-opacity" style={{ backgroundColor: tag.color }} title="Click to filter by tag">{tag.name}</button>)}
-            </div>
-            {progress !== null && (
-              <div className="mt-2">
-                <div className="flex justify-between text-xs text-gray-400 mb-1"><span>Subtasks</span><span>{done}/{subtasks.length} ({progress}%)</span></div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${progress}%` }} /></div>
-              </div>
-            )}
-          </div>
+      <div key={todo.id} className={`rounded-xl border bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm ${todo.completed ? 'opacity-60' : ''}`}>
+        <div className="flex items-center gap-3 px-4 py-3">
+          <input type="checkbox" checked={!!todo.completed} onChange={() => handleToggle(todo)} className="w-4 h-4 cursor-pointer shrink-0" />
+          <span className={`flex-1 text-sm font-medium dark:text-gray-100 ${todo.completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>{todo.title}</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${PRIORITY_COLORS[todo.priority]}`}>{todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0 w-4 text-center">{subtasks.length}</span>
+          <button onClick={() => setExpandedTodos((p) => { const n = new Set(p); n.has(todo.id) ? n.delete(todo.id) : n.add(todo.id); return n })} className="text-gray-400 hover:text-blue-500 shrink-0 text-xs">
+            {isExpanded ? '▼' : '▶'}
+          </button>
+          <button onClick={() => openEdit(todo)} className="text-sm text-blue-500 hover:text-blue-700 shrink-0">Edit</button>
+          <button onClick={() => handleDelete(todo.id)} className="text-sm text-red-500 hover:text-red-700 shrink-0">Del</button>
         </div>
-        <button onClick={() => setExpandedTodos((p) => { const n = new Set(p); n.has(todo.id) ? n.delete(todo.id) : n.add(todo.id); return n })} className="mt-2 text-xs text-blue-500 hover:underline">
-          {isExpanded ? 'Hide subtasks ▲' : `Subtasks (${subtasks.length}) ▼`}
-        </button>
         {isExpanded && (
-          <div className="mt-2 pl-4 border-l-2 border-gray-100 dark:border-gray-700 space-y-1.5">
+          <div className="px-4 pb-3 border-t dark:border-gray-700 pt-2 space-y-1.5">
             {subtasks.map((s) => (
               <div key={s.id} className="flex items-center gap-2">
                 <input type="checkbox" checked={!!s.completed} onChange={() => handleToggleSubtask(todo.id, s.id, s.completed)} className="w-3.5 h-3.5 cursor-pointer" />
@@ -443,106 +430,135 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-20">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
-          <h1 className="text-xl font-bold dark:text-white">📝 Todo App</h1>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button onClick={() => router.push('/calendar')} className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">📅 Calendar</button>
-            <button onClick={() => setShowTagModal(true)} className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">🏷️ Tags</button>
-            <button onClick={() => setShowTemplateModal(true)} className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">📋 Templates</button>
-            <button onClick={() => window.open('/api/todos/export')} className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">⬇️ Export</button>
-            <label className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 cursor-pointer">
-              ⬆️ Import<input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
-            </label>
-            {notifEnabled
-              ? <button onClick={() => setNotifEnabled(false)} className="text-xs px-2.5 py-1.5 rounded-lg bg-green-100 text-green-700">🔔 On</button>
-              : <button onClick={handleEnableNotifications} className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">🔕 Notif</button>}
-            <button onClick={() => setDarkMode((d) => !d)} className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">{darkMode ? '☀️' : '🌙'}</button>
-            <button onClick={handleLogout} className="text-xs px-2.5 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">Logout</button>
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+          <div>
+            <h1 className="text-xl font-bold dark:text-white">Todo App</h1>
+            {username && <p className="text-sm text-gray-500 dark:text-gray-400">Welcome, {username}</p>}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <button onClick={() => setShowDataDropdown((v) => !v)} className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 flex items-center gap-1">
+                <span>⋮</span> Data
+              </button>
+              {showDataDropdown && (
+                <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-30 overflow-hidden">
+                  <button onClick={() => { window.open('/api/todos/export'); setShowDataDropdown(false) }} className="w-full text-left text-sm px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200">⬇️ Export JSON</button>
+                  <button onClick={() => { window.open('/api/todos/export?format=csv'); setShowDataDropdown(false) }} className="w-full text-left text-sm px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200">⬇️ Export CSV</button>
+                  <label className="w-full text-left text-sm px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200 cursor-pointer block">
+                    ⬆️ Import<input ref={importRef} type="file" accept=".json" className="hidden" onChange={(e) => { handleImport(e); setShowDataDropdown(false) }} />
+                  </label>
+                  <button onClick={() => { setShowTagModal(true); setShowDataDropdown(false) }} className="w-full text-left text-sm px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200">🏷️ Tags</button>
+                  <button onClick={() => { setDarkMode((d) => !d); setShowDataDropdown(false) }} className="w-full text-left text-sm px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200">{darkMode ? '☀️ Light' : '🌙 Dark'}</button>
+                </div>
+              )}
+            </div>
+            <button onClick={() => router.push('/calendar')} className="text-sm px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700">📅 Calendar</button>
+            <button onClick={() => setShowTemplateModal(true)} className="text-sm px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700">📋 Templates</button>
+            <button onClick={notifEnabled ? () => setNotifEnabled(false) : handleEnableNotifications} className={`text-sm px-3 py-1.5 rounded-lg ${notifEnabled ? 'bg-orange-400 text-white hover:bg-orange-500' : 'bg-orange-100 text-orange-600 hover:bg-orange-200'}`}>🔔</button>
+            <button onClick={handleLogout} className="text-sm px-3 py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200">Logout</button>
           </div>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-5">
         {/* Add Todo */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">Add Todo</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
           <form onSubmit={handleAddTodo} className="space-y-3">
+            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Add a new todo..." required className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
             <div className="flex gap-2">
-              <select value={selectedTemplate} onChange={(e) => applyTemplate(e.target.value ? Number(e.target.value) : '')} className="text-sm border rounded-lg px-2 py-2 bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
-                <option value="">Template...</option>
-                {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <select value={newPriority} onChange={(e) => setNewPriority(e.target.value as Priority)} className="text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
+                <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
               </select>
-              <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="What needs to be done?" required className="flex-1 border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <div className="flex-1 flex items-center gap-1">
+                <input type="datetime-local" value={newDueDate} min={getSingaporeNowStr()} onChange={(e) => setNewDueDate(e.target.value)} className="flex-1 text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
+                {newDueDate && <button type="button" onClick={() => { setNewDueDate(''); setNewReminder('') }} className="text-gray-400 hover:text-red-500 text-lg leading-none" title="Clear date">✕</button>}
+              </div>
+              <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium">Add</button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <select value={newPriority} onChange={(e) => setNewPriority(e.target.value as Priority)} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
-                <option value="high">🔴 High</option><option value="medium">🟡 Medium</option><option value="low">🔵 Low</option>
-              </select>
-              <label className="flex flex-col gap-0.5">
-                <span className="text-xs text-gray-400 dark:text-gray-500">Due date (optional)</span>
-                <input type="datetime-local" value={newDueDate} min={getSingaporeNowStr()} onChange={(e) => setNewDueDate(e.target.value)} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
-              </label>
-              <select value={newReminder} disabled={!newDueDate} onChange={(e) => setNewReminder(e.target.value ? Number(e.target.value) : '')} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" title={!newDueDate ? 'Set a due date first' : undefined}>
-                <option value="">No reminder</option>
-                {REMINDER_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
-              <label className="flex items-center gap-1.5 text-sm dark:text-gray-200 cursor-pointer">
-                <input type="checkbox" checked={newIsRecurring} onChange={(e) => setNewIsRecurring(e.target.checked)} /> Recurring
-              </label>
-              {newIsRecurring && (
-                <select value={newRecurrence} onChange={(e) => setNewRecurrence(e.target.value as RecurrencePattern)} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
-                  <option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option>
-                </select>
-              )}
-            </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {tags.map((tag) => (
-                  <button key={tag.id} type="button"
-                    onClick={() => setNewTagIds((p) => p.includes(tag.id) ? p.filter((x) => x !== tag.id) : [...p, tag.id])}
-                    className={`text-xs px-2 py-1 rounded-full border transition-all ${newTagIds.includes(tag.id) ? 'text-white border-transparent' : 'bg-gray-50 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}
-                    style={newTagIds.includes(tag.id) ? { backgroundColor: tag.color } : {}}
-                  >{tag.name}</button>
-                ))}
+            <button type="button" onClick={() => setShowAddAdvanced((v) => !v)} className="text-sm text-blue-500 hover:underline flex items-center gap-1">
+              {showAddAdvanced ? '↑ Hide Advanced Options' : '↓ Show Advanced Options'}
+            </button>
+            {showAddAdvanced && (
+              <div className="space-y-2 pt-1 border-t dark:border-gray-700">
+                <div className="flex flex-wrap items-center gap-4 pt-2">
+                  <label className="flex items-center gap-1.5 text-sm dark:text-gray-200 cursor-pointer">
+                    <input type="checkbox" checked={newIsRecurring} onChange={(e) => setNewIsRecurring(e.target.checked)} /> Repeat
+                    {newIsRecurring && <select value={newRecurrence} onChange={(e) => setNewRecurrence(e.target.value as RecurrencePattern)} className="ml-1 text-sm border rounded-lg px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
+                      <option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option>
+                    </select>}
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm dark:text-gray-200">
+                    Reminder:
+                    <select value={newReminder} disabled={!newDueDate} onChange={(e) => setNewReminder(e.target.value ? Number(e.target.value) : '')} className="text-sm border rounded-lg px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" title={!newDueDate ? 'Set a due date first' : undefined}>
+                      <option value="">None</option>
+                      {REMINDER_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <div className="flex items-center gap-2 text-sm dark:text-gray-200">
+                  <span className="shrink-0">Use Template:</span>
+                  <select value={selectedTemplate} onChange={(e) => applyTemplate(e.target.value ? Number(e.target.value) : '')} className="text-sm border rounded-lg px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
+                    <option value="">Select a template...</option>
+                    {templates.map((t) => <option key={t.id} value={t.id}>{t.name}{t.category ? ` (${t.category})` : ''}</option>)}
+                  </select>
+                </div>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {tags.map((tag) => (
+                      <button key={tag.id} type="button"
+                        onClick={() => setNewTagIds((p) => p.includes(tag.id) ? p.filter((x) => x !== tag.id) : [...p, tag.id])}
+                        className={`text-xs px-2 py-1 rounded-full border transition-all ${newTagIds.includes(tag.id) ? 'text-white border-transparent' : 'bg-gray-50 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}
+                        style={newTagIds.includes(tag.id) ? { backgroundColor: tag.color } : {}}
+                      >{tag.name}</button>
+                    ))}
+                  </div>
+                )}
+                <button type="button" onClick={() => setShowSaveTemplate(true)} disabled={!newTitle.trim()} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-40">💾 Save as Template</button>
               </div>
             )}
-            <div className="flex gap-2">
-              <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors">+ Add Todo</button>
-              <button type="button" onClick={() => setShowSaveTemplate(true)} disabled={!newTitle.trim()} className="text-sm px-3 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 disabled:opacity-40">Save as Template</button>
-            </div>
           </form>
         </div>
 
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
-          <div className="flex gap-2 flex-wrap">
-            <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); if (debounceRef.current) clearTimeout(debounceRef.current); debounceRef.current = setTimeout(() => setDebouncedSearch(e.target.value), 300) }} placeholder="🔍 Search titles or tags..." className="flex-1 min-w-32 border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value as Priority | '')} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
-              <option value="">All priorities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+          <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); if (debounceRef.current) clearTimeout(debounceRef.current); debounceRef.current = setTimeout(() => setDebouncedSearch(e.target.value), 300) }} placeholder="Search todos and subtasks..." className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <div className="flex gap-2">
+            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value as Priority | '')} className="text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
+              <option value="">All Priorities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
             </select>
-            <select value={filterTag} onChange={(e) => setFilterTag(e.target.value ? Number(e.target.value) : '')} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
-              <option value="">All tags</option>
-              {tags.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as 'all' | 'pending' | 'completed')} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
-              <option value="all">All</option><option value="pending">Pending</option><option value="completed">Completed</option>
-            </select>
-            <button onClick={() => setShowAdvanced((v) => !v)} className="text-sm px-3 py-2 border rounded-lg dark:border-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">{showAdvanced ? 'Less ▲' : 'More ▼'}</button>
+            <button onClick={() => setShowAdvanced((v) => !v)} className={`text-sm px-4 py-2 rounded-lg font-medium flex items-center gap-1 ${showAdvanced ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'} hover:bg-blue-700`}>
+              {showAdvanced ? '▲' : '▼'} Advanced
+            </button>
           </div>
-          {filterTag !== '' && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500 dark:text-gray-400">Filtering by tag:</span>
-              <span className="px-2 py-0.5 rounded-full text-white text-xs" style={{ backgroundColor: tags.find((t) => t.id === filterTag)?.color }}>
-                {tags.find((t) => t.id === filterTag)?.name}
-              </span>
-              <button onClick={() => setFilterTag('')} className="text-gray-400 hover:text-red-500 font-bold">✕ clear</button>
-            </div>
-          )}
           {showAdvanced && (
-            <div className="flex gap-3 flex-wrap items-center">
-              <label className="text-sm dark:text-gray-300">From: <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="ml-1 border rounded px-2 py-1 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" /></label>
-              <label className="text-sm dark:text-gray-300">To: <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="ml-1 border rounded px-2 py-1 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" /></label>
-              <button onClick={() => { setSearch(''); setDebouncedSearch(''); setFilterPriority(''); setFilterTag(''); setFilterStatus('all'); setFilterDateFrom(''); setFilterDateTo('') }} className="text-sm px-3 py-1.5 bg-gray-100 rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">Clear all</button>
+            <div className="border dark:border-gray-700 rounded-xl p-4 space-y-3">
+              <h3 className="font-semibold text-sm dark:text-gray-200">Advanced Filters</h3>
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Completion Status</label>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as 'all' | 'pending' | 'completed')} className="w-full text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
+                  <option value="all">All Todos</option><option value="pending">Pending Only</option><option value="completed">Completed Only</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Due Date From</label>
+                  <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Due Date To</label>
+                  <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
+                </div>
+              </div>
+              {tags.length > 0 && (
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Tag</label>
+                  <select value={filterTag} onChange={(e) => setFilterTag(e.target.value ? Number(e.target.value) : '')} className="w-full text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
+                    <option value="">All Tags</option>
+                    {tags.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <button onClick={() => { setSearch(''); setDebouncedSearch(''); setFilterPriority(''); setFilterTag(''); setFilterStatus('all'); setFilterDateFrom(''); setFilterDateTo('') }} className="text-xs text-red-500 hover:text-red-700">Clear all filters</button>
             </div>
           )}
         </div>
@@ -552,13 +568,31 @@ export default function HomePage() {
 
         {/* Pending */}
         <section>
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Pending ({pending.length})</h2>
+          <h2 className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-2">Pending ({pending.length})</h2>
           {pending.length === 0 ? <p className="text-center text-gray-400 py-8">No pending todos 🎉</p> : <div className="space-y-2">{pending.map(renderTodo)}</div>}
         </section>
 
         {/* Completed */}
-        {completed.length > 0 && <section><h2 className="text-sm font-semibold text-gray-400 mb-2">Completed ({completed.length})</h2><div className="space-y-2">{completed.map(renderTodo)}</div></section>}
+        {completed.length > 0 && <section><h2 className="text-sm font-semibold text-gray-400 dark:text-gray-500 mb-2">Completed ({completed.length})</h2><div className="space-y-2">{completed.map(renderTodo)}</div></section>}
       </main>
+
+      {/* Footer Stats */}
+      <footer className="sticky bottom-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-sm">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex justify-around">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-red-500">{overdue.length}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Overdue</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-500">{pending.length}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Pending</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-500">{completed.length}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Completed</div>
+          </div>
+        </div>
+      </footer>
 
       {/* Edit Modal */}
       {editTodo && (
@@ -572,7 +606,10 @@ export default function HomePage() {
               </select>
               <label className="flex flex-col gap-0.5">
                 <span className="text-xs text-gray-400 dark:text-gray-500">Due date (optional)</span>
-                <input type="datetime-local" value={editDueDate} min={getSingaporeNowStr()} onChange={(e) => setEditDueDate(e.target.value)} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
+                <div className="flex items-center gap-1">
+                  <input type="datetime-local" value={editDueDate} min={getSingaporeNowStr()} onChange={(e) => setEditDueDate(e.target.value)} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
+                  {editDueDate && <button type="button" onClick={() => { setEditDueDate(''); setEditReminder('') }} className="text-gray-400 hover:text-red-500 text-lg leading-none" title="Clear date">✕</button>}
+                </div>
               </label>
               <select value={editReminder} disabled={!editDueDate} onChange={(e) => setEditReminder(e.target.value ? Number(e.target.value) : '')} className="text-sm border rounded-lg px-2 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 disabled:opacity-40 disabled:cursor-not-allowed" title={!editDueDate ? 'Set a due date first' : undefined}>
                 <option value="">No reminder</option>
